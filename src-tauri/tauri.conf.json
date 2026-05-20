@@ -10,9 +10,14 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "yamusic-legacy",
-        "width": 800,
-        "height": 600
+        "title": "YaMusic Legacy",
+        "url": "auth.html",
+        "width": 1300,
+        "height": 900,
+        "minWidth": 1300,
+        "minHeight": 900,
+        "center": true,
+        "resizable": true
       }
     ],
     "security": {
