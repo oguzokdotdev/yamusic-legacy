@@ -12,6 +12,7 @@
       {
         "title": "YaMusic Legacy",
         "url": "auth.html",
+        "backgroundColor": "#0D0D0D",
         "width": 1300,
         "height": 900,
         "minWidth": 1300,

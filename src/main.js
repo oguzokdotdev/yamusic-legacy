@@ -1,3 +1,8 @@
+const token = localStorage.getItem('ya_token');
+if (!token) {
+  window.location.replace('auth.html');
+}
+
 // Навигация по страницам
 const navBtns = document.querySelectorAll('.nav-btn[data-page]');
 const pages = document.querySelectorAll('.page');
