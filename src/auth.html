@@ -4,11 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>YaMusic Legacy — Вход</title>
-  <script>
-  if (localStorage.getItem('ya_token')) {
-    window.location.replace('index.html');
-  }
-  </script>
   <link rel="stylesheet" href="styles.css">
 </head>
 
@@ -44,37 +39,32 @@
      <p>Неофициальное приложение · Не одобрено и не связано с ООО «Яндекс»</p>
    </footer>
     <script>
-    // Достаем инструменты Tauri из глобального объекта (т.к. withGlobalTauri: true)
-    const { invoke } = window.__TAURI__.core;
-    const { listen } = window.__TAURI__.event;
+      const { invoke } = window.__TAURI__.core;
+      const { listen } = window.__TAURI__.event;
 
-    const authBtn = document.getElementById('btn-auth');
+      // Проверяем keyring до рендера
+      invoke('get_token').then(token => {
+        if (token) window.location.replace('index.html');
+      });
 
-    authBtn.onclick = async () => {
-        // 1. Блокируем кнопку, чтобы не наоткрывать лишних окон
+      const authBtn = document.getElementById('btn-auth');
+
+      authBtn.onclick = async () => {
         authBtn.disabled = true;
         authBtn.innerText = 'Открываем окно входа...';
-
-        // 2. Вызываем команду из Rust (мы её прописали в lib.rs)
         try {
-        await invoke('open_auth_window');
+          await invoke('open_auth_window');
         } catch (err) {
-        console.error('Ошибка при открытии окна:', err);
-        authBtn.disabled = false;
-        authBtn.innerText = 'Войти через Яндекс';
+          console.error(err);
+          authBtn.disabled = false;
+          authBtn.innerText = 'Войти через Яндекс';
         }
-    };
+      };
 
-    // 3. Слушаем "крик" из Rust, когда токен будет пойман
-    listen('auth-success', (event) => {
-        const token = event.payload;
-        
-        // Сохраняем в локальное хранилище браузера
-        localStorage.setItem('ya_token', token);
-        
-        // Вот теперь, когда токен у нас, можно лететь в плеер!
+      listen('auth-success', () => {
+        // Токен уже сохранён в keyring в Rust — просто переходим
         window.location.href = 'index.html';
-    });
+      });
     </script>
 </body>
 </html>

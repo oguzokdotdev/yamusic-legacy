@@ -1,8 +1,9 @@
-const token = localStorage.getItem('ya_token');
+const { invoke } = window.__TAURI__.core;
+
+const token = await invoke('get_token');
 if (!token) {
   window.location.replace('auth.html');
 }
-
 // Навигация по страницам
 const navBtns = document.querySelectorAll('.nav-btn[data-page]');
 const pages = document.querySelectorAll('.page');
