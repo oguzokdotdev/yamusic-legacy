@@ -38,10 +38,38 @@
      <p>© oguzokdotdev 2026 · <a href="https://github.com/oguzokdotdev/YaMusic-Legacy" target="_blank">Исходный код на GitHub</a></p>
      <p>Неофициальное приложение · Не одобрено и не связано с ООО «Яндекс»</p>
    </footer>
-  <script>
-    document.getElementById('btn-auth').onclick = () => {
-      window.location.href = 'index.html';
+    <script>
+    // Достаем инструменты Tauri из глобального объекта (т.к. withGlobalTauri: true)
+    const { invoke } = window.__TAURI__.core;
+    const { listen } = window.__TAURI__.event;
+
+    const authBtn = document.getElementById('btn-auth');
+
+    authBtn.onclick = async () => {
+        // 1. Блокируем кнопку, чтобы не наоткрывать лишних окон
+        authBtn.disabled = true;
+        authBtn.innerText = 'Открываем окно входа...';
+
+        // 2. Вызываем команду из Rust (мы её прописали в lib.rs)
+        try {
+        await invoke('open_auth_window');
+        } catch (err) {
+        console.error('Ошибка при открытии окна:', err);
+        authBtn.disabled = false;
+        authBtn.innerText = 'Войти через Яндекс';
+        }
     };
-  </script>
+
+    // 3. Слушаем "крик" из Rust, когда токен будет пойман
+    listen('auth-success', (event) => {
+        const token = event.payload;
+        
+        // Сохраняем в локальное хранилище браузера
+        localStorage.setItem('ya_token', token);
+        
+        // Вот теперь, когда токен у нас, можно лететь в плеер!
+        window.location.href = 'index.html';
+    });
+    </script>
 </body>
 </html>
