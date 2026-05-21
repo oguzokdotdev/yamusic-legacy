@@ -1,31 +1,38 @@
-use keyring::Entry;
+use std::fs;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
-const KEYRING_SERVICE: &str = "yamusic-legacy";
-const KEYRING_USER: &str = "yandex_token";
-
-#[tauri::command]
-fn save_token(token: String) -> Result<(), String> {
-    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER).map_err(|e| e.to_string())?;
-    entry.set_password(&token).map_err(|e| e.to_string())
+fn token_path(app: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    Ok(dir.join("token"))
 }
 
 #[tauri::command]
-fn get_token() -> Result<Option<String>, String> {
-    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER).map_err(|e| e.to_string())?;
-    match entry.get_password() {
-        Ok(token) => Ok(Some(token)),
-        Err(keyring::Error::NoEntry) => Ok(None),
+fn save_token(app: tauri::AppHandle, token: String) -> Result<(), String> {
+    let path = token_path(&app)?;
+    fs::write(&path, token).map_err(|e| e.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = fs::set_permissions(&path, fs::Permissions::from_mode(0o600));
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn get_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
+    match fs::read_to_string(token_path(&app)?) {
+        Ok(t) => Ok(Some(t.trim().to_string())),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
         Err(e) => Err(e.to_string()),
     }
 }
 
 #[tauri::command]
-fn delete_token() -> Result<(), String> {
-    let entry = Entry::new(KEYRING_SERVICE, KEYRING_USER).map_err(|e| e.to_string())?;
-    match entry.delete_credential() {
+fn delete_token(app: tauri::AppHandle) -> Result<(), String> {
+    match fs::remove_file(token_path(&app)?) {
         Ok(_) => Ok(()),
-        Err(keyring::Error::NoEntry) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
         Err(e) => Err(e.to_string()),
     }
 }
@@ -55,13 +62,6 @@ async fn open_auth_window(app: tauri::AppHandle) {
                     .to_string();
 
                 if !token.is_empty() {
-                    println!("ТОКЕН ПОЙМАН: {}", token);
-
-                    // Сохраняем в keyring
-                    if let Ok(entry) = Entry::new(KEYRING_SERVICE, KEYRING_USER) {
-                        let _ = entry.set_password(&token);
-                    }
-
                     let _ = handle.emit("auth-success", token);
 
                     let h = handle.clone();

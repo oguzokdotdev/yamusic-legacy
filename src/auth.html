@@ -42,27 +42,29 @@
       const { invoke } = window.__TAURI__.core;
       const { listen } = window.__TAURI__.event;
 
-      // Проверяем keyring до рендера
-      invoke('get_token').then(token => {
-        if (token) window.location.replace('index.html');
+      // Автоматический вход, если токен уже существует
+      (async () => {
+        try {
+          const token = await invoke('get_token');
+          if (token) {
+            window.location.href = 'index.html';
+          }
+        } catch (e) {
+          console.error('get_token error:', e);
+        }
+      })();
+
+      document.getElementById('btn-auth').addEventListener('click', () => {
+        invoke('open_auth_window');
       });
 
-      const authBtn = document.getElementById('btn-auth');
-
-      authBtn.onclick = async () => {
-        authBtn.disabled = true;
-        authBtn.innerText = 'Открываем окно входа...';
+      listen('auth-success', async (event) => {
+        const token = event.payload;
         try {
-          await invoke('open_auth_window');
-        } catch (err) {
-          console.error(err);
-          authBtn.disabled = false;
-          authBtn.innerText = 'Войти через Яндекс';
+          await invoke('save_token', { token });
+        } catch (e) {
+          console.error('save_token error:', e);
         }
-      };
-
-      listen('auth-success', () => {
-        // Токен уже сохранён в keyring в Rust — просто переходим
         window.location.href = 'index.html';
       });
     </script>
