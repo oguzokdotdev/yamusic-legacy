@@ -29,6 +29,23 @@ fn get_token(app: tauri::AppHandle) -> Result<Option<String>, String> {
 }
 
 #[tauri::command]
+async fn get_account_status(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let token = get_token(app.clone())?.ok_or("No token found")?;
+    let client = reqwest::Client::new();
+    
+    let response = client
+        .get("https://api.music.yandex.net/account/status")
+        .header("Authorization", format!("OAuth {}", token))
+        .header("User-Agent", "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let json = response.json::<serde_json::Value>().await.map_err(|e| e.to_string())?;
+    Ok(json)
+}
+
+#[tauri::command]
 fn delete_token(app: tauri::AppHandle) -> Result<(), String> {
     match fs::remove_file(token_path(&app)?) {
         Ok(_) => Ok(()),
@@ -88,6 +105,7 @@ pub fn run() {
             save_token,
             get_token,
             delete_token,
+            get_account_status,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -57,3 +57,30 @@ const sidebarToggle = document.getElementById('sidebar-toggle');
 sidebarToggle.addEventListener('click', () => {
   sidebar.classList.toggle('collapsed');
 });
+
+// Интеграция с API: подтягиваем профиль
+const { invoke } = window.__TAURI__.core;
+
+async function updateProfile() {
+  try {
+    const status = await invoke('get_account_status');
+    const account = status.result.account;
+    const plus = status.result.plus;
+
+    const fullName = `${account.firstName ?? ''} ${account.secondName ?? ''}`.trim();
+    document.querySelector('.user-name').textContent = fullName || account.login;
+
+    const plusEl = document.querySelector('.user-plus');
+    if (plus?.hasPlus) {
+      plusEl.textContent = '✦ Плюс активен';
+      plusEl.style.color = '#FFCC00';
+    } else {
+      plusEl.textContent = 'Плюс не активен';
+      plusEl.style.color = '#888';
+    }
+  } catch (e) {
+    console.error('Failed to fetch profile:', e);
+  }
+}
+
+updateProfile();
